@@ -10,12 +10,12 @@ import matplotlib.pyplot as plt
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.ndimage.filters import gaussian_filter
 import time 
-dataPath = "./simpleData"
-#dataPath = "./smallData"
+#dataPath = "./midData"
+dataPath = "./smallData"
 queryPath = "querySVG.svg"
 sampleLen = 10 
 maxError = 5 
-binNum = 60
+binNum = 180
 def rOfCurve(curve, point):
 	p = curve[0]*3*(-1)*(1-point)*(1-point) + \
 	    curve[1]*3*((1-point)*(1-point) + point*2*(-1)*(1-point)) +\
@@ -63,7 +63,7 @@ def radiusWithinRange(curve, start, rRange):
 #		print "Down"
 		rLevel =  math.floor(rNow/rRange)*rRange
 		if(rLevel == rNow):
-			rLevel -= 3
+			rLevel -= rRange
 #	print "rLevel = {}".format(rLevel)
 	if(rLevel > 180):
 		rLevel -= 180
@@ -120,7 +120,7 @@ def radiusWithinRange(curve, start, rRange):
 #Cut the line into several line segments
 # input : a path 
 # output : a path
-def lineSegment(path):
+def lineSegment(path, rRange=3.0):
         newPath = Path()
         for segment in path:
                 if type(segment) is  Line :
@@ -134,7 +134,7 @@ def lineSegment(path):
 			start = 0
 			end = 0
 			while(cmath.polar(endPoint - segment.point(1))[0] > 0.001):
-				end, length = radiusWithinRange(segment, start, 3.0)
+				end, length = radiusWithinRange(segment, start, rRange)
 				endPoint = segment.point(end)
                                 newPath.append(Line(startPoint, startPoint + length*(startPoint - endPoint)/cmath.polar(endPoint - startPoint)[0]))
 				startPoint = endPoint
@@ -175,13 +175,13 @@ def pathFitCurve(path, maxError, smooth = False):
 # preprocess all the path in the list
 # input : a list of path in the image
 # output : only a list of line segment
-def preprocess(pathList, smooth = False):
+def preprocess(pathList, smooth = False, rRange=3):
         newPath = Path()
         for path in pathList:
 		path = pathFitCurve(path, maxError, smooth)
                 for segment in path:
                         newPath.append(segment)
-        newPath = lineSegment(newPath)
+        newPath = lineSegment(newPath, rRange)
 	return newPath
 # calculate the angle of a line
 # input : a line
@@ -426,7 +426,7 @@ def readDataSet(path, smooth=False, binNum=60):
 	for i in range(len(svgData0)):
 		start2 = time.time()
 		print i
-		svgData.append(preprocess(svgData0[i], smooth)) 
+		svgData.append(preprocess(svgData0[i], smooth, 180/binNum)) 
 		end2 = time.time()
 		print "cost {} s".format(end2 -start2)
 	outputData = []
@@ -501,4 +501,8 @@ def evaluate(allF, k = 2, num = 20):
 		pList.append(p)
 	print "At {}, recall = {}, precision = {}".format(num, sum(rList)/len(allF), sum(pList)/len(allF))
 	return [rList,pList]
-#data = readDataSet(dataPath, False, binNum)
+def saveTo(data, path):
+	pickle.dump(data, open(path, "wb"), True)
+def loadTo(data):
+	return pickle.load(open(path, "rb"))
+data = readDataSet(dataPath, False, binNum)
