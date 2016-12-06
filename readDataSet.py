@@ -10,12 +10,12 @@ import matplotlib.pyplot as plt
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.ndimage.filters import gaussian_filter
 import time 
-#dataPath = "./midData"
+#dataPath = "./simpleData"
 dataPath = "./smallData"
 queryPath = "querySVG.svg"
 sampleLen = 10 
 maxError = 5 
-binNum = 180
+binNum = 60
 def rOfCurve(curve, point):
 	p = curve[0]*3*(-1)*(1-point)*(1-point) + \
 	    curve[1]*3*((1-point)*(1-point) + point*2*(-1)*(1-point)) +\
@@ -33,7 +33,7 @@ def rOfCurve(curve, point):
 def complexDist(c1, c2):
 	return math.sqrt((c1.real-c2.real)**2 + (c1.imag-c2.imag)**2)
 def lenOfCurve(curve, s, e):
-	sample = int(math.floor(curve.length()/1 * (e-s)))
+	sample = int(math.floor(curve.length()/0.9 * (e-s)))
 	length = 0
 	if(sample < 1):
 		return 0
@@ -43,6 +43,8 @@ def lenOfCurve(curve, s, e):
 	return length
 def radiusWithinRange(curve, start, rRange):
 	if(1 - start < 0.001):	  
+#		print "quick return"
+#		print start
 		return [start , 0]
 	rNow = rOfCurve(curve, start) 
 	rEnd = rOfCurve(curve, 1) 
@@ -79,9 +81,10 @@ def radiusWithinRange(curve, start, rRange):
 #		return [1, lenOfCurve(curve,start,1)]
 	r = 0
 #	print "rLevel = {}".format(rLevel)
-        while((bEnd - bStart)> 0.005):
+#        while((bEnd - bStart)> 0.005):
+        while((bEnd - bStart)> 0.00005):
 		bNow = (bStart + bEnd)/2.0
-#		print r
+#		print "bEnd {}, r {}".format(bEnd, r)
 		r = rOfCurve(curve, bNow)
 		if( k == 1):
 			if(rNow<= r <=rEnd):
@@ -116,6 +119,7 @@ def radiusWithinRange(curve, start, rRange):
 #	if(lenOfCurve(curve,start, bEnd)>100):
 #		print "error??"
 #		raw_input();
+#	print "length is {}".format(lenOfCurve(curve,start, bEnd))
 	return bEnd, lenOfCurve(curve,start, bEnd)
 #Cut the line into several line segments
 # input : a path 
@@ -129,16 +133,23 @@ def lineSegment(path, rRange=3.0):
 #                        n = int(math.floor(segment.length()/sampleLen)) + 1
 #                        for i in range(n) :
 #                                newPath.append(Line(segment.point(1.0*i/n), segment.point(1.0*(i+1)/n)))
+#			print "Cut Bezier Curve"
 			startPoint = segment[0]
 			endPoint = segment[0]
 			start = 0
 			end = 0
-			while(cmath.polar(endPoint - segment.point(1))[0] > 0.001):
+#			while(cmath.polar(endPoint - segment.point(1))[0] > 0.001):
+			while(start <  0.999):	  
 				end, length = radiusWithinRange(segment, start, rRange)
 				endPoint = segment.point(end)
-                                newPath.append(Line(startPoint, startPoint + length*(startPoint - endPoint)/cmath.polar(endPoint - startPoint)[0]))
-				startPoint = endPoint
-				start = end
+                                l = cmath.polar(endPoint - startPoint)[0]
+				if(l != 0):	
+#					print "l != 0"
+#                           		print cmath.polar(endPoint - startPoint)
+#                                	print Line(startPoint, startPoint + length*(startPoint - endPoint)/cmath.polar(endPoint - startPoint)[0])
+                        	        newPath.append(Line(startPoint, startPoint + length*(startPoint - endPoint)/cmath.polar(endPoint - startPoint)[0]))
+					startPoint = endPoint
+					start = end
         return newPath  
 
 #Fit the line by Curve 
@@ -181,6 +192,7 @@ def preprocess(pathList, smooth = False, rRange=3):
 		path = pathFitCurve(path, maxError, smooth)
                 for segment in path:
                         newPath.append(segment)
+#	print "rRange = {}".format(rRange)
         newPath = lineSegment(newPath, rRange)
 	return newPath
 # calculate the angle of a line
@@ -298,6 +310,15 @@ def calcDistance(f1, f2):
 		dist += diff * diff
 	return dist
 
+def calcDistancek(f1, f2, k):
+	dist = 0
+	l = len(f1)
+	for i in range(l):
+		diff = f1[(i+k)%l] - f2[i]
+		dist += diff * diff
+	return dist
+
+
 def calcDistance4(f1, f2):
 	dist = 0
 	for i in range(len(f1)):
@@ -385,7 +406,7 @@ def readSVG(svgPath, smooth=False, binNum=60):
 	end2 = time.time()
 	print " read file cost {} s".format(end2 -start2)
 	start2 = time.time()
-	path = preprocess(paths, smooth)
+	path = preprocess(paths, smooth, 180.0/binNum) 
 	end2 = time.time()
 	print " preprocess cost {} s".format(end2 -start2)
 	outputData = []
@@ -409,7 +430,41 @@ def readSVG(svgPath, smooth=False, binNum=60):
 	end = time.time()
 	print "cost {} s".format(end -start)
 	return outputData, paths, path
-	
+
+def readDataSet0(path, smooth=False, binNum=60):
+	start = time.time()
+	files = [f for f in listdir(dataPath) if isfile(join(dataPath, f))]
+	if ".DS_Store" in files :
+		files.remove(".DS_Store") 
+
+	#read svg from file
+	svgData0 = [] 
+	for p in files:
+		path = svg2paths(join(dataPath, p))[0]
+		svgData0.append(path)
+	svgData = []
+	for i in range(len(svgData0)):
+		start2 = time.time()
+		print i
+		svgData.append(preprocess(svgData0[i], smooth, 180.0/binNum)) 
+		end2 = time.time()
+		print "cost {} s".format(end2 -start2)
+	outputData = []
+	for i in range(len(svgData)):
+		p = svgData[i]
+		r = calcRadiansFeature(p)
+		w = calcWeightFeature(p)
+                m = calcMidFeature(p)
+		f = calcFeature(r, w, binNum)
+#		f2 = calcFeature2(r, w, m, binNum)
+#		f3 = calcFeature3(f2, binNum)
+#		outputData.append([r, w, f, f2, f3, gaussian_filter1d(f, 0.2, truncate=3), 
+		f4 = [ mm-1/binNum for mm in gaussian_filter1d(f, 0.6, truncate=3)]
+		outputData.append([f, files[i]])
+	end = time.time()
+	print "cost {} s".format(end -start)
+	return outputData
+
 	
 def readDataSet(path, smooth=False, binNum=60):
 	start = time.time()
@@ -426,7 +481,7 @@ def readDataSet(path, smooth=False, binNum=60):
 	for i in range(len(svgData0)):
 		start2 = time.time()
 		print i
-		svgData.append(preprocess(svgData0[i], smooth, 180/binNum)) 
+		svgData.append(preprocess(svgData0[i], smooth, 180.0/binNum)) 
 		end2 = time.time()
 		print "cost {} s".format(end2 -start2)
 	outputData = []
@@ -453,15 +508,20 @@ def readDataSet(path, smooth=False, binNum=60):
 	return outputData
 
 def distF(f1, f2):
+#	start = time.time()
 	target = 0 
 	targetDist = 10000000 
 	for i in range(binNum):
-		dist = calcDistance(np.roll(f1, i), f2)
+#		dist = calcDistance(np.roll(f1, i), f2)
+		dist = calcDistancek(f1, f2, i)
 		if dist < targetDist:
 			target = i
 			targetDist = dist
+#	end = time.time()
+#	print "cost {} s".format(end -start)
 	return [targetDist, target]
 def find(allF, queryF, k=2, num=10):
+	start = time.time()
 	resultData = []
 	num = min([num, len(allF)])
 	for i in range(len(allF)):
@@ -473,6 +533,8 @@ def find(allF, queryF, k=2, num=10):
 	answer = []
 	for i in range(num):
 		answer.append(resultData[result[i][0]])
+	end = time.time()
+	print "cost {} s".format(end -start)
 	return answer
 def graph(g,binNum=60):
 	n, bins, patches = plt.hist(g[0], binNum, range=(0,180), weights=g[1])
@@ -505,4 +567,4 @@ def saveTo(data, path):
 	pickle.dump(data, open(path, "wb"), True)
 def loadTo(data):
 	return pickle.load(open(path, "rb"))
-data = readDataSet(dataPath, False, binNum)
+#data = readDataSet(dataPath, False, binNum)
