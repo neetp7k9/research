@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.ndimage.filters import gaussian_filter
 import time 
+import pickle
 #dataPath = "./simpleData"
 dataPath = "./smallData"
 queryPath = "querySVG.svg"
@@ -303,7 +304,7 @@ def calcFeature3(f2, binNum):
 			feature[i][int(math.floor(p[1]*4.9))][int(math.floor(p[2]*4.9))] += p[3]
 	return np.array(feature)
 	
-def calcDistance(f1, f2):
+def calcDistance0(f1, f2):
 	dist = 0
 	for i in range(len(f1)):
 		diff = f1[i] - f2[i]
@@ -319,14 +320,13 @@ def calcDistancek(f1, f2, k):
 	return dist
 
 
-def calcDistance4(f1, f2):
+def calcDistance3(f1, f2):
 	dist = 0
 	for i in range(len(f1)):
 		diff = f1[i] - f2[i]
 		if diff < 0:
 			diff =  -diff
-		w = int(math.floor(diff*1000)) + 1
-		diff = diff * w * w
+		diff = diff * diff * diff * 1000 
 		dist = dist + diff
 	return dist
 def calcDistance5(f1, f2):
@@ -337,21 +337,23 @@ def calcDistance5(f1, f2):
 	return dist
 	
 
-def calcDistance3(f1, f2):
+def calcDistance(f1, f2, k):
 	dist = 0
-	for i in range(len(f1)):
-		diff = f1[i] * f2[i]
+	l = len(f1)
+	for i in range(l):
+		diff = f1[(i+k)%l] * f2[i]
 		dist = dist + diff
-	return dist
+	return 1-dist
 #JSD
-def calcDistancejsd(f1, f2):
+def calcDistanceJSD(f1, f2, k):
 	dist = 0
-	for i in range(len(f1)):
-		dsum = f1[i] + f2[i]
+	l = len(f1)
+	for i in range(l):
+		dsum = f1[(i+k)%l] + f2[i]
 		diff1 = 0
 		diff2 = 0
-		if(f1[i] != 0):
-		 diff1 = f1[i] * math.log( 2*f1[i] / dsum ) 
+		if(f1[(i+k)%l] != 0):
+		 diff1 = f1[(i+k)%l] * math.log( 2*f1[(i+k)%l] / dsum ) 
 		if(f2[i] != 0):
 		 diff2 = f2[i] * math.log( 2*f2[i] / dsum ) 
 		dist = dist + diff1 + diff2
@@ -454,17 +456,29 @@ def readDataSet0(path, smooth=False, binNum=60):
 		p = svgData[i]
 		r = calcRadiansFeature(p)
 		w = calcWeightFeature(p)
-                m = calcMidFeature(p)
 		f = calcFeature(r, w, binNum)
 #		f2 = calcFeature2(r, w, m, binNum)
 #		f3 = calcFeature3(f2, binNum)
 #		outputData.append([r, w, f, f2, f3, gaussian_filter1d(f, 0.2, truncate=3), 
-		f4 = [ mm-1/binNum for mm in gaussian_filter1d(f, 0.6, truncate=3)]
 		outputData.append([f, files[i]])
 	end = time.time()
 	print "cost {} s".format(end -start)
 	return outputData
-
+def changeToData(data):
+	outputData = []
+	for i in range(len(data)):
+		f = data[i][0]
+		fileName = data[i][1]
+		outputData.append([[ i*180.0/len(f) for i in range(len(f))], f, f, 0, gaussian_filter1d(f, 0.2, truncate=3), 
+		                                    gaussian_filter1d(f, 0.4, truncate=3), 
+		                                    gaussian_filter1d(f, 0.5, truncate=3), 
+		                                    gaussian_filter1d(f, 0.6, truncate=3), 
+		                                    gaussian_filter1d(f, 0.7, truncate=3), 
+		                                    gaussian_filter1d(f, 0.8, truncate=3), 
+		                                    gaussian_filter1d(f, 0.9, truncate=3), 
+		                                    gaussian_filter1d(f, 0.95, truncate=3), fileName])
+	return outputData
+		
 	
 def readDataSet(path, smooth=False, binNum=60):
 	start = time.time()
@@ -512,8 +526,7 @@ def distF(f1, f2):
 	target = 0 
 	targetDist = 10000000 
 	for i in range(binNum):
-#		dist = calcDistance(np.roll(f1, i), f2)
-		dist = calcDistancek(f1, f2, i)
+		dist = calcDistance(f1, f2, i)
 		if dist < targetDist:
 			target = i
 			targetDist = dist
@@ -550,17 +563,23 @@ def evaluateQ(allF, queryF, k=2, num=20):
 	for i in range(len(answer)):
 		if(target == tagOfPath(answer[i][-2])):
 			right += 1
-		print "round {}, recall = {}, precision = {}".format(i, 1.0*right/20, 1.0*right/(i+1))
+#		print "round {}, recall = {}, precision = {}".format(i, 1.0*right/20, 1.0*right/(i+1))
 	print "round {}, recall = {}, precision = {}".format(i, 1.0*right/20, 1.0*right/(i+1))
         return [1.0*right/20, 1.0*right/(i+1)]
 def evaluate(allF, k = 2, num = 20):
+	start = time.time()
 	rList = [];
 	pList = [];
 	for i in range(len(allF)):	
 		print "test {} {}".format(i, allF[i][-1])
 		r, p = evaluateQ(allF, allF[i], k, num)
 		rList.append(r)
-		pList.append(p)
+		pList.append(p)	
+		end = time.time()
+		print "cost {} s".format(end -start)
+		print "At {}, recall = {}, precision = {}".format(i, sum(rList)/(i+1), sum(pList)/(i+1))
+	end = time.time()
+	print "cost {} s".format(end -start)
 	print "At {}, recall = {}, precision = {}".format(num, sum(rList)/len(allF), sum(pList)/len(allF))
 	return [rList,pList]
 def saveTo(data, path):
