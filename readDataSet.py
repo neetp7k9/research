@@ -512,9 +512,10 @@ def readDataSet0(path, smooth=False, binNum=60):
 		f = calcFeature(r, w, binNum)
                 m = calcMidFeature(p)
 		f2 = calcFeature2(r, w, m, binNum)
+		v = calcVariance(f2)
 #		f3 = calcFeature3(f2, binNum)
 #		outputData.append([r, w, f, f2, f3, gaussian_filter1d(f, 0.2, truncate=3), 
-		outputData.append([f, m, f2, files[i]])
+		outputData.append([f, v, files[i]])
 	end = time.time()
 	print "cost {} s".format(end -start)
 	return outputData
@@ -578,7 +579,7 @@ def readDataSet(path, smooth=False, binNum=60):
 	print "cost {} s".format(end -start)
 	return outputData
 
-def distF(f1, f2, k):
+def distF(f1, f2, k=0):
 	target = 0 
 	targetDist = 10000000 
 	for i in range(binNum):
