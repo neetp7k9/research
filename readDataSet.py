@@ -16,7 +16,7 @@ dataPath = "./simpleData"
 queryPath = "querySVG.svg"
 sampleLen = 10 
 maxError = 5 
-binNum = 60
+binNum = 10
 def rOfCurve(curve, point):
 	p = curve[0]*3*(-1)*(1-point)*(1-point) + \
 	    curve[1]*3*((1-point)*(1-point) + point*2*(-1)*(1-point)) +\
@@ -469,8 +469,10 @@ def changeToData(data):
 	outputData = []
 	for i in range(len(data)):
 		f = data[i][0]
-		fileName = data[i][1]
-		outputData.append([[ i*180.0/len(f) for i in range(len(f))], f, f, 0, gaussian_filter1d(f, 0.2, truncate=3), 
+		fileName = data[i][-1]
+		m = data[i][1]
+		f2 = data[i][2]
+		outputData.append([[ i*180.0/len(f) for i in range(len(f))], f2, f, m, gaussian_filter1d(f, 0.2, truncate=3), 
 		                                    gaussian_filter1d(f, 0.4, truncate=3), 
 		                                    gaussian_filter1d(f, 0.5, truncate=3), 
 		                                    gaussian_filter1d(f, 0.6, truncate=3), 
@@ -691,4 +693,4 @@ def barChart():
 
 
 
-#data = readDataSet(dataPath, False, binNum)
+data = readDataSet(dataPath, False, binNum)
