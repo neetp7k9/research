@@ -4,7 +4,7 @@ from svgpathtools import Path, Line, QuadraticBezier, CubicBezier, Arc, svg2path
 import math 
 import cmath 
 import numpy as np
-from emd import emd
+#from emd import emd
 from fitCurves import *
 import matplotlib.pyplot as plt
 from scipy.ndimage.filters import gaussian_filter1d
