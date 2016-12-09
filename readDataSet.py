@@ -11,8 +11,8 @@ from scipy.ndimage.filters import gaussian_filter1d
 from scipy.ndimage.filters import gaussian_filter
 import time 
 import pickle
-#dataPath = "./simpleData"
-dataPath = "./smallData"
+dataPath = "./simpleData"
+#dataPath = "./smallData"
 queryPath = "querySVG.svg"
 sampleLen = 10 
 maxError = 5 
@@ -285,8 +285,8 @@ def calcFeature2(rFeature, wFeature, mFeature, binNum):
 		rad = mFeature[1]
 		dx = p.real
 		dy = p.imag
-		dl1 = dx * math.sin(r*pi/180) - dy * math.cos(r**pi/180)
-		dl2 = -dx * math.cos(r*pi/180) - dy * math.sin(r**pi/180)
+		dl1 = dx * math.sin(r*pi/180.0) - dy * math.cos(r**pi/180.0)
+		dl2 = -dx * math.cos(r*pi/180.0) - dy * math.sin(r**pi/180.0)
 #		feature[int(math.floor(r*binNum/180.0))] += w
 		feature.append([ r, dl1/rad, dl2/rad, w])
 	return np.array(feature)
@@ -337,7 +337,7 @@ def calcDistance5(f1, f2):
 	return dist
 	
 
-def calcDistance(f1, f2, k):
+def calcDistanceCD(f1, f2, k):
 	dist = 0
 	l = len(f1)
 	for i in range(l):
@@ -457,10 +457,11 @@ def readDataSet0(path, smooth=False, binNum=60):
 		r = calcRadiansFeature(p)
 		w = calcWeightFeature(p)
 		f = calcFeature(r, w, binNum)
-#		f2 = calcFeature2(r, w, m, binNum)
+                m = calcMidFeature(p)
+		f2 = calcFeature2(r, w, m, binNum)
 #		f3 = calcFeature3(f2, binNum)
 #		outputData.append([r, w, f, f2, f3, gaussian_filter1d(f, 0.2, truncate=3), 
-		outputData.append([f, files[i]])
+		outputData.append([f, m, f2, files[i]])
 	end = time.time()
 	print "cost {} s".format(end -start)
 	return outputData
@@ -584,6 +585,110 @@ def evaluate(allF, k = 2, num = 20):
 	return [rList,pList]
 def saveTo(data, path):
 	pickle.dump(data, open(path, "wb"), True)
-def loadTo(data):
+def loadTo(path):
 	return pickle.load(open(path, "rb"))
+def seeRecall(path, path2):
+	r = pickle.load(open(path, "rb"))
+	data = pickle.load(open(path2, "rb"))
+	cdf = [0]*len(r)
+	for i in range(len(r)):
+		if i == 0:
+			cdf[i] = r[i]
+		else:
+			cdf[i] = (cdf[i-1] + r[i])
+	for i in range(len(r)):
+		cdf[i] /= i+1
+	d = {}
+	for i in range(len(data)):
+		d[tagOfPath(data[i][-1])] = 0
+	for i in range(len(data)):
+		d[tagOfPath(data[i][-1])] += r[i]/20.0
+	
+	return [d, cdf]	
+def barChart0():
+	n_groups = 7 
+
+	recall_ED = [0.3215, 0.3156, 0.299, 0.2710, 0.2856, 0.272, 0.279]
+	recall_JD = [0.35928, 0.381, 0.313, 0.2821, 0.2912, 0.303, 0.282]
+
+	fig, ax = plt.subplots()
+
+	index = np.arange(n_groups)
+	bar_width = 0.35
+
+	opacity = 0.4
+	error_config = {'ecolor': '0.3'}
+
+	rects1 = plt.bar(index, recall_ED, bar_width,
+                 alpha=opacity,
+                 color='b',
+                 error_kw=error_config,
+                 label='ED')
+
+	rects2 = plt.bar(index + bar_width, recall_JD, bar_width,
+                 alpha=opacity,
+                 color='r',
+                 error_kw=error_config,
+                 label='JD')
+
+	plt.xlabel('Number of bins')
+	plt.ylabel('Recall rate')
+	plt.title('Recall rate by Number of bins and Distance measurement')
+	plt.xticks(index + bar_width, ('10', '30', '60', '90', '120', '150', '180'))
+	plt.legend()
+
+	plt.tight_layout()
+	plt.show()
+
+def barChart():
+	n_groups = 4 
+
+	recall_NO = [0.35928, 0.381, 0.2821, 0.282]
+	recall_02 = [0.3635, 0.3823, 0.2746, 0.3321]
+	recall_06 = [0.3513, 0.3833, 0.3081, 0.2953]
+	recall_08 = [0.3421, 0.3874, 0.3707, 0.3785]
+
+	fig, ax = plt.subplots()
+
+	index = np.arange(n_groups)
+	bar_width = 0.35
+
+	opacity = 0.4
+	error_config = {'ecolor': '0.3'}
+
+	rects1 = plt.bar(index*2, recall_NO, bar_width,
+                 alpha=opacity,
+                 color='b',
+                 error_kw=error_config,
+                 label='No filter')
+
+	rects2 = plt.bar(index*2 + bar_width, recall_02, bar_width,
+                 alpha=opacity,
+                 color='r',
+                 error_kw=error_config,
+                 label='Filter, standard deviation  = 0.2')
+	rects3 = plt.bar(index*2 + bar_width*2, recall_06, bar_width,
+                 alpha=opacity,
+                 color='g',
+                 error_kw=error_config,
+                 label='Filter, standard deviation  = 0.6')
+	rects4 = plt.bar(index*2 + bar_width*3, recall_08, bar_width,
+                 alpha=opacity,
+                 color='c',
+                 error_kw=error_config,
+                 label='Filter, standard deviation  = 0.8')
+
+	plt.xlabel('Number of bins')
+	plt.ylabel('Recall rate')
+	plt.ylim([0, 0.6])
+	plt.title('Recall rate by Number of bins and filter setting')
+	plt.xticks(index*2 + bar_width*2, ('10', '30', '90', '180'))
+	plt.legend()
+
+	plt.tight_layout()
+	plt.show()
+
+
+
+
 #data = readDataSet(dataPath, False, binNum)
