@@ -304,23 +304,26 @@ def calcVariance(f2, binNum):
 		tmp[int(math.floor(r*binNum/180.0))].append([x, y, w])
 	for i in range(binNum):
 		angleList = tmp[i]
-		sum_x = 0
-		sum_y = 0
-		mean_x = 0
-		mean_y = 0
+		if(len(angleList)==0):
+			feature.append([0,0])
+		else:	
+			sum_x = 0
+			sum_y = 0
+			mean_x = 0
+			mean_y = 0
+	
+			for j in range(len(angleList)):
+				sum_x += angleList[j][0] 
+				sum_y += angleList[j][1] 
 
-		for j in range(len(angleList)):
-			sum_x += angleList[j][1] 
-			sum_y += angleList[j][2] 
-
-		mean_x = sum_x*1.0 / len(tmp[i]) 
-		mean_y = sum_y*1.0 / len(tmp[i])
-		
-		rfeature = [0,0]
-		for j in range(len(angleList)):
-			rfeature[0] += angleList[j][3]*((angleList[j][1] - mean_x)**2)
-			rfeature[1] += angleList[j][3]*((angleList[j][2] - mean_y)**2)
-		feature.append(rfeature)
+			mean_x = sum_x*1.0 / len(tmp[i]) 
+			mean_y = sum_y*1.0 / len(tmp[i])
+			
+			rfeature = [0,0]
+			for j in range(len(angleList)):
+				rfeature[0] += angleList[j][2]*((angleList[j][0] - mean_x)**2)
+				rfeature[1] += angleList[j][2]*((angleList[j][1] - mean_y)**2)
+			feature.append(rfeature)
 	return feature
 def calcFeature3(f2, binNum):
 	#50 * 50
@@ -486,7 +489,7 @@ def readSVG(svgPath, smooth=False, binNum=60):
 	print "cost {} s".format(end -start)
 	return outputData, paths, path
 
-def readDataSet0(path, smooth=False, binNum=60):
+def readDataSet0(dataPath, smooth=False, binNum=60):
 	start = time.time()
 	files = [f for f in listdir(dataPath) if isfile(join(dataPath, f))]
 	if ".DS_Store" in files :
