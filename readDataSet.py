@@ -291,6 +291,37 @@ def calcFeature2(rFeature, wFeature, mFeature, binNum):
 		feature.append([ r, dl1/rad, dl2/rad, w])
 	return np.array(feature)
 
+def calcVariance(f2, binNum):
+	feature =[]
+	tmp = [] 
+	for i in range(binNum):
+		tmp.append([])	
+	for i in range(len(f2)):
+		r = f2[i][0]
+		x = f2[i][1]
+		y = f2[i][2]
+		w = f2[i][3]
+		tmp[int(math.floor(r*binNum/180.0))].append([x,y w])
+	for i in range(binNum):
+		angleList = tmp[i]
+		sum_x = 0
+		sum_y = 0
+		mean_x = 0
+		mean_y = 0
+
+		for j in range(len(angleList)):
+			sum_x += angleList[j][1] 
+			sum_y += angleList[j][2] 
+
+		mean_x = sum_x*1.0 / len(tmp[i] 
+		mean_y = sum_y*1.0 / len(tmp[i] 
+		
+		rfeature = [0,0]
+		for j in range(len(angleList)):
+			rfeature[0] += angleList[j][3]*((angleList[j][1] - mean_x)**2)
+			rfeature[1] += angleList[j][3]*((angleList[j][2] - mean_x)**2)
+		feature.append(rfeature)
+	return feature
 def calcFeature3(f2, binNum):
 	#50 * 50
 	size = 5
@@ -311,12 +342,32 @@ def calcDistance0(f1, f2):
 		dist += diff * diff
 	return dist
 
-def calcDistancek(f1, f2, k):
+def calcDistance(f1, f2, k):
 	dist = 0
 	l = len(f1)
 	for i in range(l):
 		diff = f1[(i+k)%l] - f2[i]
 		dist += diff * diff
+	return dist
+
+
+def calcDistance(f1, f2, k, m):
+	a = 0.5
+	b = 1-a
+	dist = 0
+	v1 = f1[1]
+	v2 = f2[1]
+	f1 = f1[m]
+	f2 = f2[m]
+	l = len(f1)
+	for i in range(l):
+		diff = f1[(i+k)%l] - f2[i]
+		diff2 = v1[(i+k)%l][0] - v2[i][0]
+		diff3 = v1[(i+k)%l][1] - v2[i][1]
+		
+		dist += a*diff * diff
+		dist += b*diff2 * diff2
+		dist += b*diff3 * diff3
 	return dist
 
 
@@ -364,6 +415,8 @@ def calcAllFeature(rAllFeature, wAllFeature, binNum):
 	for i in range(len(rAllFeature)):
 		allFeature.append(calcFeature(rAllFeature[i], wAllFeature[i], binNum))
 	return np.array(allFeature)
+
+	
 
 def find(allFeature, queryFeature):
 	target = -1
@@ -472,7 +525,8 @@ def changeToData(data):
 		fileName = data[i][-1]
 		m = data[i][1]
 		f2 = data[i][2]
-		outputData.append([[ i*180.0/len(f) for i in range(len(f))], f2, f, m, gaussian_filter1d(f, 0.2, truncate=3), 
+		v = calcVariance(f2)
+		outputData.append([f2, v, f, gaussian_filter1d(f, 0.2, truncate=3), 
 		                                    gaussian_filter1d(f, 0.4, truncate=3), 
 		                                    gaussian_filter1d(f, 0.5, truncate=3), 
 		                                    gaussian_filter1d(f, 0.6, truncate=3), 
@@ -524,8 +578,19 @@ def readDataSet(path, smooth=False, binNum=60):
 	print "cost {} s".format(end -start)
 	return outputData
 
-def distF(f1, f2):
-#	start = time.time()
+def distF(f1, f2, k):
+	target = 0 
+	targetDist = 10000000 
+	for i in range(binNum):
+		dist = calcDistance(f1, f2, i, k)
+		if dist < targetDist:
+			target = i
+			targetDist = dist
+	return [targetDist, target]
+
+def distF2(f1, f2, k):
+	f1 = f1[k]
+	f2 = f2[k]
 	target = 0 
 	targetDist = 10000000 
 	for i in range(binNum):
@@ -533,15 +598,15 @@ def distF(f1, f2):
 		if dist < targetDist:
 			target = i
 			targetDist = dist
-#	end = time.time()
-#	print "cost {} s".format(end -start)
 	return [targetDist, target]
+
+
 def find(allF, queryF, k=2, num=10):
 	start = time.time()
 	resultData = []
 	num = min([num, len(allF)])
 	for i in range(len(allF)):
-		distnow = distF(allF[i][k], queryF[k])
+		distnow = distF(allF[i], queryF, k)
 		distnow.append(allF[i][-1])
 		distnow.append(i)
 		resultData.append(distnow)
