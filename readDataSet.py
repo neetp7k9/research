@@ -512,7 +512,7 @@ def readDataSet0(path, smooth=False, binNum=60):
 		f = calcFeature(r, w, binNum)
                 m = calcMidFeature(p)
 		f2 = calcFeature2(r, w, m, binNum)
-		v = calcVariance(f2)
+		v = calcVariance(f2, binNum)
 #		f3 = calcFeature3(f2, binNum)
 #		outputData.append([r, w, f, f2, f3, gaussian_filter1d(f, 0.2, truncate=3), 
 		outputData.append([f, v, files[i]])
@@ -526,7 +526,7 @@ def changeToData(data):
 		fileName = data[i][-1]
 		m = data[i][1]
 		f2 = data[i][2]
-		v = calcVariance(f2)
+		v = calcVariance(f2, binNum)
 		outputData.append([f2, v, f, gaussian_filter1d(f, 0.2, truncate=3), 
 		                                    gaussian_filter1d(f, 0.4, truncate=3), 
 		                                    gaussian_filter1d(f, 0.5, truncate=3), 
@@ -759,4 +759,4 @@ def barChart():
 
 
 
-data = readDataSet(dataPath, False, binNum)
+#data = readDataSet(dataPath, False, binNum)
