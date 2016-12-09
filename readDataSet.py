@@ -301,7 +301,7 @@ def calcVariance(f2, binNum):
 		x = f2[i][1]
 		y = f2[i][2]
 		w = f2[i][3]
-		tmp[int(math.floor(r*binNum/180.0))].append([x,y w])
+		tmp[int(math.floor(r*binNum/180.0))].append([x, y, w])
 	for i in range(binNum):
 		angleList = tmp[i]
 		sum_x = 0
@@ -313,13 +313,13 @@ def calcVariance(f2, binNum):
 			sum_x += angleList[j][1] 
 			sum_y += angleList[j][2] 
 
-		mean_x = sum_x*1.0 / len(tmp[i] 
-		mean_y = sum_y*1.0 / len(tmp[i] 
+		mean_x = sum_x*1.0 / len(tmp[i]) 
+		mean_y = sum_y*1.0 / len(tmp[i])
 		
 		rfeature = [0,0]
 		for j in range(len(angleList)):
 			rfeature[0] += angleList[j][3]*((angleList[j][1] - mean_x)**2)
-			rfeature[1] += angleList[j][3]*((angleList[j][2] - mean_x)**2)
+			rfeature[1] += angleList[j][3]*((angleList[j][2] - mean_y)**2)
 		feature.append(rfeature)
 	return feature
 def calcFeature3(f2, binNum):
